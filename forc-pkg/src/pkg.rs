@@ -25,7 +25,7 @@ use std::{
 };
 use sway_core::{
     semantic_analysis::namespace, source_map::SourceMap, types::*, BytecodeCompilationResult,
-    CompileAstResult, CompileError, TreeType,
+    CompileResult, CompileAstResult, CompileError, ParseProgram, TreeType,
 };
 use sway_utils::constants;
 use tracing::info;
@@ -1473,11 +1473,17 @@ pub fn compile_ast(
     manifest: &ManifestFile,
     build_profile: &BuildProfile,
     namespace: namespace::Module,
+    parsed: Option<&CompileResult<ParseProgram>>,
 ) -> Result<CompileAstResult> {
     let source = manifest.entry_string()?;
     let sway_build_config =
         sway_build_config(manifest.dir(), &manifest.entry_path(), build_profile)?;
-    let ast_res = sway_core::compile_to_ast(source, namespace, Some(&sway_build_config));
+    let ast_res = match parsed {
+        Some(parsed) => {
+            sway_core::parsed_to_ast(parsed, namespace)
+        }
+        None => sway_core::compile_to_ast(source, namespace, Some(&sway_build_config))
+    };
     Ok(ast_res)
 }
 
@@ -1534,7 +1540,7 @@ pub fn compile(
     // First, compile to an AST. We'll update the namespace and check for JSON ABI output.
     let ast_res = time_expr!(
         "compile to ast",
-        compile_ast(manifest, build_profile, namespace)?
+        compile_ast(manifest, build_profile, namespace, None)?
     );
     match &ast_res {
         CompileAstResult::Failure { warnings, errors } => {
@@ -1648,6 +1654,7 @@ pub fn check(
     plan: &BuildPlan,
     silent_mode: bool,
     sway_git_tag: &str,
+    parsed: Option<CompileResult<ParseProgram>>,
 ) -> anyhow::Result<CompileAstResult> {
     let profile = BuildProfile {
         silent: silent_mode,
@@ -1661,7 +1668,7 @@ pub fn check(
         let pkg = &plan.graph[node];
         let path = &plan.path_map[&pkg.id()];
         let manifest = ManifestFile::from_dir(path, sway_git_tag)?;
-        let ast_res = compile_ast(&manifest, &profile, dep_namespace)?;
+        let ast_res = compile_ast(&manifest, &profile, dep_namespace, parsed.as_ref())?;
         if let CompileAstResult::Success { typed_program, .. } = &ast_res {
             if let TreeType::Library { .. } = typed_program.kind.tree_type() {
                 namespace_map.insert(node, typed_program.root.namespace.clone());
