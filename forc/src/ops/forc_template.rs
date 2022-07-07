@@ -6,10 +6,10 @@ use forc_pkg::{
 };
 use forc_util::validate_name;
 use fs_extra::dir::{copy, CopyOptions};
+use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::env;
 use sway_utils::constants;
 use tracing::info;
 use url::Url;
