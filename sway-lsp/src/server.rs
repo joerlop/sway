@@ -1,9 +1,9 @@
-use crate::capabilities;
-use crate::core::{
-    document::{DocumentError, TextDocument},
-    session::Session,
+use crate::{
+    capabilities,
+    core::{document::TextDocument, session::Session},
+    error::ServerError,
+    utils::debug::{self, DebugFlags},
 };
-use crate::utils::debug::{self, DebugFlags};
 use forc_util::find_manifest_dir;
 use std::sync::Arc;
 use sway_utils::helpers::get_sway_files;
@@ -31,7 +31,7 @@ impl Backend {
         self.client.log_message(MessageType::INFO, message).await;
     }
 
-    fn parse_and_store_sway_files(&self) -> Result<(), DocumentError> {
+    fn parse_and_store_sway_files(&self) -> Result<(), ServerError> {
         let curr_dir = std::env::current_dir().unwrap();
 
         if let Some(path) = find_manifest_dir(&curr_dir) {

@@ -4,9 +4,9 @@ use tower_lsp::lsp_types::{
     Diagnostic, DidChangeTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
 };
 
-use crate::core::{
-    document::{DocumentError, TextDocument},
-    session::Session,
+use crate::{
+    core::{document::TextDocument, session::Session},
+    error::ServerError,
 };
 
 pub fn handle_open_file(
@@ -45,7 +45,7 @@ pub fn handle_save_file(
 fn parse_document(session: Arc<Session>, path: &str) -> Vec<Diagnostic> {
     match session.parse_document(path) {
         Ok(diagnostics) => diagnostics,
-        Err(DocumentError::FailedToParse(diagnostics)) => diagnostics,
+        Err(ServerError::FailedToParse(diagnostics)) => diagnostics,
         _ => vec![],
     }
 }

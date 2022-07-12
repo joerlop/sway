@@ -1,8 +1,10 @@
-use crate::core::{
-    session::Session,
-    token::{AstToken, TokenMap, TokenType, TypedAstToken},
+use crate::{
+    core::{
+        session::Session,
+        token::{AstToken, TokenMap, TokenType, TypedAstToken},
+    },
+    utils::common::get_range_from_span,
 };
-use crate::utils::common::get_range_from_span;
 use std::sync::Arc;
 use sway_core::{
     semantic_analysis::ast_node::{

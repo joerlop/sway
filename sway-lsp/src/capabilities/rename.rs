@@ -4,8 +4,10 @@ use tower_lsp::lsp_types::{
     PrepareRenameResponse, RenameParams, TextDocumentPositionParams, TextEdit, WorkspaceEdit,
 };
 
-use crate::core::{session::Session, token::AstToken};
-use crate::utils::common::get_range_from_span;
+use crate::{
+    core::{session::Session, token::AstToken},
+    utils::common::get_range_from_span,
+};
 
 pub fn rename(session: Arc<Session>, params: RenameParams) -> Option<WorkspaceEdit> {
     let new_name = params.new_name;

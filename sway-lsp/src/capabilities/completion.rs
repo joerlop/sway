@@ -1,8 +1,10 @@
-use crate::core::{
-    session::Session,
-    token::{AstToken, TokenMap, TypedAstToken},
+use crate::{
+    core::{
+        session::Session,
+        token::{AstToken, TokenMap, TypedAstToken},
+    },
+    utils::token::is_initial_declaration,
 };
-use crate::utils::token::is_initial_declaration;
 use std::sync::Arc;
 use sway_core::{
     semantic_analysis::ast_node::{

@@ -1,8 +1,10 @@
-use crate::core::{
-    session::Session,
-    token::{AstToken, TokenMap},
+use crate::{
+    core::{
+        session::Session,
+        token::{AstToken, TokenMap},
+    },
+    utils::common::get_range_from_span,
 };
-use crate::utils::common::get_range_from_span;
 use std::sync::Arc;
 use sway_core::{Declaration, Expression, Literal};
 use sway_types::Span;

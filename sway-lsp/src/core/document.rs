@@ -1,9 +1,14 @@
 #![allow(dead_code)]
 
-use super::token::{TokenMap, TokenType};
-use super::{traverse_parse_tree, traverse_typed_tree};
-
-use crate::{capabilities, utils};
+use crate::{
+    capabilities,
+    core::{
+        token::{TokenMap, TokenType},
+        traverse_parse_tree, traverse_typed_tree,
+    },
+    error::ServerError,
+    utils,
+};
 use forc::utils::SWAY_GIT_TAG;
 use forc_pkg::{self as pkg};
 use ropey::Rope;
@@ -27,7 +32,7 @@ pub struct TextDocument {
 }
 
 impl TextDocument {
-    pub fn build_from_path(path: &str) -> Result<Self, DocumentError> {
+    pub fn build_from_path(path: &str) -> Result<Self, ServerError> {
         match std::fs::read_to_string(&path) {
             Ok(content) => Ok(Self {
                 language_id: "sway".into(),
@@ -36,7 +41,7 @@ impl TextDocument {
                 content: Rope::from_str(&content),
                 token_map: HashMap::new(),
             }),
-            Err(_) => Err(DocumentError::DocumentNotFound),
+            Err(_) => Err(ServerError::DocumentNotFound),
         }
     }
 
@@ -99,7 +104,7 @@ impl TextDocument {
         &self.uri
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Diagnostic>, DocumentError> {
+    pub fn parse(&mut self) -> Result<Vec<Diagnostic>, ServerError> {
         self.clear_token_map();
 
         let manifest_dir = PathBuf::from(self.get_uri());
@@ -120,7 +125,7 @@ impl TextDocument {
             }
         }
 
-        Err(DocumentError::FailedToParse(vec![]))
+        Err(ServerError::FailedToParse(vec![]))
     }
 
     pub fn apply_change(&mut self, change: &TextDocumentContentChangeEvent) {
@@ -177,14 +182,14 @@ impl TextDocument {
     fn parse_tokens_from_text(
         &mut self,
         parsed_result: CompileResult<ParseProgram>,
-    ) -> Result<Vec<Diagnostic>, DocumentError> {
+    ) -> Result<Vec<Diagnostic>, ServerError> {
         match parsed_result.value {
             None => {
                 let diagnostics = capabilities::diagnostic::get_diagnostics(
                     parsed_result.warnings,
                     parsed_result.errors,
                 );
-                Err(DocumentError::FailedToParse(diagnostics))
+                Err(ServerError::FailedToParse(diagnostics))
             }
             Some(parse_program) => {
                 for node in &parse_program.root.tree.root_nodes {
@@ -264,11 +269,4 @@ struct EditText<'text> {
     start_index: usize,
     end_index: usize,
     change_text: &'text str,
-}
-
-#[derive(Debug)]
-pub enum DocumentError {
-    FailedToParse(Vec<Diagnostic>),
-    DocumentNotFound,
-    DocumentAlreadyStored,
 }

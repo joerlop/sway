@@ -1,6 +1,7 @@
-use super::document::{DocumentError, TextDocument};
+use super::document::TextDocument;
 use crate::{
     capabilities::{self, formatting::get_format_text_edits},
+    error::ServerError,
     sway_config::SwayConfig,
     utils::common::get_range_from_span,
 };
@@ -37,27 +38,27 @@ impl Session {
     }
 
     // Document
-    pub fn store_document(&self, text_document: TextDocument) -> Result<(), DocumentError> {
+    pub fn store_document(&self, text_document: TextDocument) -> Result<(), ServerError> {
         match self
             .documents
             .insert(text_document.get_uri().into(), text_document)
         {
             None => Ok(()),
-            _ => Err(DocumentError::DocumentAlreadyStored),
+            _ => Err(ServerError::DocumentAlreadyStored),
         }
     }
 
-    pub fn remove_document(&self, url: &Url) -> Result<TextDocument, DocumentError> {
+    pub fn remove_document(&self, url: &Url) -> Result<TextDocument, ServerError> {
         match self.documents.remove(url.path()) {
             Some((_, text_document)) => Ok(text_document),
-            None => Err(DocumentError::DocumentNotFound),
+            None => Err(ServerError::DocumentNotFound),
         }
     }
 
-    pub fn parse_document(&self, path: &str) -> Result<Vec<Diagnostic>, DocumentError> {
+    pub fn parse_document(&self, path: &str) -> Result<Vec<Diagnostic>, ServerError> {
         match self.documents.get_mut(path) {
             Some(ref mut document) => document.parse(),
-            _ => Err(DocumentError::DocumentNotFound),
+            _ => Err(ServerError::DocumentNotFound),
         }
     }
 
