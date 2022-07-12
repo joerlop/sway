@@ -2,6 +2,7 @@ use tower_lsp::{LspService, Server};
 
 mod capabilities;
 mod core;
+mod error;
 mod server;
 mod sway_config;
 pub mod utils;
