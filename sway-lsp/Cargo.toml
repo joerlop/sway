@@ -9,6 +9,7 @@ repository = "https://github.com/FuelLabs/sway"
 description = "LSP server for Sway."
 
 [dependencies]
+anyhow = "1"
 dashmap = "5.3.4"
 forc = { version = "0.18.1", path = "../forc" }
 forc-pkg = { version = "0.18.1", path = "../forc-pkg" }

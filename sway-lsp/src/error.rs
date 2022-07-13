@@ -3,6 +3,9 @@ use tower_lsp::lsp_types::Diagnostic;
 
 #[derive(Debug, Error)]
 pub enum ServerError {
+    #[error(transparent)]
+    ManifestFileMissing(#[from] anyhow::Error),
+
     #[error("document not found")]
     DocumentNotFound,
 

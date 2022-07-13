@@ -113,15 +113,20 @@ impl TextDocument {
         let offline = false;
 
         // TODO: match on any errors and report them back to the user in a future PR
-        if let Ok(manifest) = pkg::ManifestFile::from_dir(&manifest_dir, SWAY_GIT_TAG) {
-            if let Ok(plan) =
-                pkg::BuildPlan::from_lock_and_manifest(&manifest, locked, offline, SWAY_GIT_TAG)
-            {
-                if let Ok((parsed_res, _ast_res)) = pkg::check(&plan, silent_mode) {
-                    let r = self.parse_tokens_from_text(parsed_res);
-                    //self.test_typed_parse(ast_res);
-                    return r;
+        match pkg::ManifestFile::from_dir(&manifest_dir, SWAY_GIT_TAG) {
+            Ok(manifest) => {
+                if let Ok(plan) =
+                    pkg::BuildPlan::from_lock_and_manifest(&manifest, locked, offline, SWAY_GIT_TAG)
+                {
+                    if let Ok((parsed_res, _ast_res)) = pkg::check(&plan, silent_mode) {
+                        let r = self.parse_tokens_from_text(parsed_res);
+                        //self.test_typed_parse(ast_res);
+                        return r;
+                    }
                 }
+            }
+            Err(e) => {
+                ServerError::ManifestFileMissing(e);
             }
         }
 
