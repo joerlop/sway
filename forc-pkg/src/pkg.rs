@@ -1280,24 +1280,7 @@ fn pin_pkg(
             pinned
         }
         Source::Git(ref git_source) => {
-            // TODO: If the git source directly specifies a full commit hash, we should first check
-            // to see if we have a local copy. Otherwise we cannot know what commit we should pin
-            // to without fetching the repo into a temporary directory.
-            let (pinned_git, repo_path) = if offline {
-                let (local_path, commit_hash) = search_git_source_locally(&name, git_source)?
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "Unable to fetch pkg {:?} from  {:?} in offline mode",
-                            name,
-                            git_source.repo
-                        )
-                    })?;
-                let pinned_git = SourceGitPinned {
-                    source: git_source.clone(),
-                    commit_hash,
-                };
-                (pinned_git, local_path)
-            } else if let Ok(Some((local_path, commit_hash))) =
+            let (pinned_git, repo_path) = if let Ok(Some((local_path, commit_hash))) =
                 search_git_source_locally(&name, git_source)
             {
                 // Repo found locally use it
@@ -1306,6 +1289,12 @@ fn pin_pkg(
                     commit_hash,
                 };
                 (pinned_git, local_path)
+            } else if offline {
+                bail!(
+                    "Unable to fetch pkg {:?} from  {:?} in offline mode",
+                    name,
+                    git_source.repo
+                )
             } else {
                 let pinned_git = pin_git(fetch_id, &name, git_source.clone())?;
                 let repo_path =
