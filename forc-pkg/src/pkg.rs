@@ -1297,6 +1297,15 @@ fn pin_pkg(
                     commit_hash,
                 };
                 (pinned_git, local_path)
+            } else if let Ok(Some((local_path, commit_hash))) =
+                search_git_source_locally(&name, git_source)
+            {
+                // Repo found locally use it
+                let pinned_git = SourceGitPinned {
+                    source: git_source.clone(),
+                    commit_hash,
+                };
+                (pinned_git, local_path)
             } else {
                 let pinned_git = pin_git(fetch_id, &name, git_source.clone())?;
                 let repo_path =
@@ -1382,7 +1391,6 @@ pub fn fetch_git(fetch_id: u64, name: &str, pinned: &SourceGitPinned) -> Result<
 
         // Copy current_dir to target
         let copy_options = fs_extra::dir::CopyOptions::new();
-        println!("copying from {:?} to {:?}", repo_path, path);
         fs_extra::copy_items(&[repo_path], &path, &copy_options)?;
         Ok(())
     })?;
