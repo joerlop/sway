@@ -1281,7 +1281,7 @@ fn pin_pkg(
         }
         Source::Git(ref git_source) => {
             let (pinned_git, repo_path) = if let Ok(Some((local_path, commit_hash))) =
-                search_git_source_locally(&name, git_source)
+                search_git_source_locally(&name, git_source, offline)
             {
                 // Repo found locally use it
                 let pinned_git = SourceGitPinned {
@@ -1392,21 +1392,28 @@ pub fn fetch_git(fetch_id: u64, name: &str, pinned: &SourceGitPinned) -> Result<
 fn search_git_source_locally(
     name: &str,
     source_git: &SourceGit,
+    offline: bool,
 ) -> Result<Option<(PathBuf, String)>> {
     // In the checkouts dir iterate over dirs whose name starts with `name`
     let checkouts_dir = git_checkouts_directory();
     match &source_git.reference {
         GitReference::Branch(branch) => {
-            // Collect repos from this branch with their HEAD time
-            let mut repos_from_branch =
-                collect_local_repos_with_branch(checkouts_dir, name, branch)?;
-            // Sort the repos by their HEAD commit times
-            repos_from_branch.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
-            if let Some(newest_branch_repo) = repos_from_branch.get(0) {
-                let (repo_path, (commit_hash, _)) = newest_branch_repo;
-                Ok(Some((repo_path.clone(), commit_hash.clone())))
+            if offline {
+                // Collect repos from this branch with their HEAD time
+                let mut repos_from_branch =
+                    collect_local_repos_with_branch(checkouts_dir, name, branch)?;
+                // Sort the repos by their HEAD commit times
+                repos_from_branch.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
+                if let Some(newest_branch_repo) = repos_from_branch.get(0) {
+                    let (repo_path, (commit_hash, _)) = newest_branch_repo;
+                    Ok(Some((repo_path.clone(), commit_hash.clone())))
+                } else {
+                    // No error occured during the process but there is no match
+                    Ok(None)
+                }
             } else {
-                // No error occured during the process but there is no match
+                // If we are in online mode, we need the most recent comit from the specified
+                // branch so we shouldn't search locally and directly fetch online.
                 Ok(None)
             }
         }
