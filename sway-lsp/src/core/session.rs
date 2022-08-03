@@ -168,6 +168,8 @@ impl Session {
                     //let res = self.parse_ast_to_typed_tokens(ast_res);
                     //self.test_typed_parse(ast_res);
                     return res;
+                } else {
+                    return Err(DocumentError::FailedToParse(vec![]));
                 }
             }
         }

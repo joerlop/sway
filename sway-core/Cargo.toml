@@ -34,3 +34,4 @@ sway-utils = { version = "0.19.1", path = "../sway-utils" }
 thiserror = "1.0"
 tracing = "0.1"
 uint = "0.9"
+stacker = "0.1.6"

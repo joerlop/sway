@@ -709,7 +709,6 @@ fn item_impl_to_declaration(
         item_impl.generic_params_opt,
         item_impl.where_clause_opt,
     )?;
-
     match item_impl.trait_opt {
         Some((path_type, _for_token)) => {
             let impl_trait = ImplTrait {
@@ -1133,12 +1132,14 @@ fn expr_to_ast_node(
         }
         Expr::While {
             condition, block, ..
-        } => AstNode {
+        } => {
+            AstNode {
             content: AstNodeContent::WhileLoop(WhileLoop {
                 condition: expr_to_expression(ec, *condition)?,
                 body: braced_code_block_contents_to_code_block(ec, block)?,
             }),
             span,
+            }
         },
         Expr::Reassignment {
             assignable,
@@ -1148,7 +1149,8 @@ fn expr_to_ast_node(
                     variant: op_variant,
                     span: op_span,
                 },
-        } => match op_variant {
+        } => {
+            match op_variant {
             ReassignmentOpVariant::Equals => AstNode {
                 content: AstNodeContent::Declaration(Declaration::Reassignment(Reassignment {
                     lhs: assignable_to_reassignment_target(ec, assignable)?,
@@ -1174,7 +1176,7 @@ fn expr_to_ast_node(
                     }));
                 AstNode { content, span }
             }
-        },
+        }},
         expr => {
             let expression = expr_to_expression(ec, expr)?;
             if !is_statement {
@@ -1602,6 +1604,7 @@ fn expr_to_expression(ec: &mut ErrorContext, expr: Expr) -> Result<Expression, E
             }
         }
         Expr::FieldProjection { target, name, .. } => {
+            //eprintln!("FieldProjection");
             let mut idents = vec![&name];
             let mut base = &*target;
             let storage_access_field_names_opt = loop {
@@ -1629,11 +1632,30 @@ fn expr_to_expression(ec: &mut ErrorContext, expr: Expr) -> Result<Expression, E
                     let field_names = field_names.into_iter().rev().cloned().collect();
                     Expression::StorageAccess { field_names, span }
                 }
-                None => Expression::SubfieldExpression {
+                None => {
+                    //eprintln!("None");
+                    //eprintln!("name: {:#?}", name);
+                    //eprintln!("target: {:#?}", target);
+
+                    println!("remaining_stack end = {:?}", stacker::remaining_stack());
+
+                        let start = name.span().start_pos().line_col();
+                        let end = name.span().end_pos().line_col();
+                    
+                        let start_line = start.0 as u32 - 1;
+                        let start_character = start.1 as u32 - 1;
+                    
+                        let end_line = end.0 as u32 - 1;
+                        let end_character = end.1 as u32 - 1;
+                    
+                        eprintln!("{}:{}-{}:{}", start_line, start_character, end_line, end_character);
+                    
+
+                    Expression::SubfieldExpression {
                     prefix: Box::new(expr_to_expression(ec, *target)?),
                     field_to_access: name,
                     span,
-                },
+                }},
             }
         }
         Expr::TupleFieldProjection {

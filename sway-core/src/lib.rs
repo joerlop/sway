@@ -91,7 +91,6 @@ fn parse_module_tree(src: Arc<str>, path: Arc<PathBuf>) -> CompileResult<(TreeTy
         Err(error) => return err(vec![], parse_file_error_to_compile_errors(error)),
     };
     let module_dir = path.parent().expect("module file has no parent directory");
-
     // Parse all submodules before converting to the `ParseTree`.
     let init_res = ok(vec![], vec![], vec![]);
     let submodules_res = module.dependencies.iter().fold(init_res, |res, dep| {
@@ -131,7 +130,6 @@ fn parse_module_tree(src: Arc<str>, path: Arc<PathBuf>) -> CompileResult<(TreeTy
             })
         })
     });
-
     // Convert from the raw parsed module to the `ParseTree` ready for type-check.
     convert_parse_tree::convert_parse_tree(module).flat_map(|(prog_kind, tree)| {
         submodules_res.flat_map(|submodules| {

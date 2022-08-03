@@ -255,7 +255,6 @@ mod tests {
     use serde_json::json;
     use std::{env, fs, io::Read, path::PathBuf};
     use tower::{Service, ServiceExt};
-
     use super::*;
     use futures::stream::StreamExt;
     use tower_lsp::jsonrpc::{self, Request, Response};
@@ -425,9 +424,49 @@ mod tests {
         assert_eq!(response, Ok(Some(err)));
     }
 
-    #[tokio::test]
-    async fn did_open() {
-        let (mut service, mut messages) = LspService::new(|client| Backend::new(client, config()));
+    // #[tokio::test]
+    #[test]
+    fn did_open() {
+        println!("remaining_stack pre tokio = {:?}", stacker::remaining_stack());
+
+        tokio::runtime::Builder::new_current_thread()
+            .thread_stack_size(100 * 1024 * 1024)
+            .thread_keep_alive(std::time::Duration::from_secs(30))
+            .build()
+            .unwrap()
+            .block_on(async {
+                println!("remaining_stack test begin = {:?}", stacker::remaining_stack());
+
+                let (mut service, mut messages) = LspService::new(|client| Backend::new(client, config()));
+
+                // send "initialize" request
+                let _ = initialize_request(&mut service).await;
+
+                // send "initialized" notification
+                initialized_notification(&mut service).await;
+
+                // ignore the "window/logMessage" notification: "Initializing the Sway Language Server"
+                messages.next().await.unwrap();
+
+                let (uri, sway_program) = load_sway_example();
+
+                //send "textDocument/didOpen" notification for `uri`
+                did_open_notification(&mut service, &uri, &sway_program).await;
+
+                // ignore the "textDocument/publishDiagnostics" notification
+                messages.next().await.unwrap();
+
+                // send "shutdown" request
+                let _ = shutdown_request(&mut service).await;
+
+                // send "exit" request
+                exit_notification(&mut service).await;
+            });
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn did_open_tokio() {
+        let (mut service, _) = LspService::new(|client| Backend::new(client, config()));
 
         // send "initialize" request
         let _ = initialize_request(&mut service).await;
@@ -435,16 +474,10 @@ mod tests {
         // send "initialized" notification
         initialized_notification(&mut service).await;
 
-        // ignore the "window/logMessage" notification: "Initializing the Sway Language Server"
-        messages.next().await.unwrap();
-
         let (uri, sway_program) = load_sway_example();
 
-        // send "textDocument/didOpen" notification for `uri`
+        //send "textDocument/didOpen" notification for `uri`
         did_open_notification(&mut service, &uri, &sway_program).await;
-
-        // ignore the "textDocument/publishDiagnostics" notification
-        messages.next().await.unwrap();
 
         // send "shutdown" request
         let _ = shutdown_request(&mut service).await;

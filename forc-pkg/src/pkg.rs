@@ -1736,7 +1736,6 @@ pub fn check(
         let pkg = &plan.graph[node];
         let manifest = &plan.manifest_map()[&pkg.id()];
         let parsed_result = parse(manifest, silent_mode)?;
-
         let parse_program = match &parsed_result.value {
             None => bail!("unable to parse"),
             Some(program) => program,
