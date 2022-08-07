@@ -372,3 +372,42 @@ pub struct Property {
     pub components: Option<Vec<Property>>, // Used for custom types
     pub type_arguments: Option<Vec<Property>>, // Used for generic types. Not yet supported in fuels-rs.
 }
+
+/// Flat JSON ABI
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgramABI {
+    #[serde(rename = "type")]
+    pub types: Vec<TypeDeclaration>,
+    pub functions: Vec<ABIFunction>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ABIFunction {
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub inputs: Vec<TypeApplication>,
+    pub name: String,
+    pub output: TypeApplication,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TypeDeclaration {
+    pub type_id: usize,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub components: Option<Vec<TypeApplication>>, // Used for custom types
+    pub type_parameters: Option<Vec<usize>>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TypeApplication {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub type_field: usize,
+    pub type_arguments: Option<Vec<usize>>,
+}

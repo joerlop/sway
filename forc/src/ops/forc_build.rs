@@ -115,6 +115,16 @@ pub fn build(command: BuildCommand) -> Result<pkg::Compiled> {
             serde_json::to_writer_pretty(&file, &compiled.json_abi)
         };
         res?;
+
+        let json_abi_flat_stem = format!("{}-flat-abi", manifest.project.name);
+        let json_abi_flat_path = output_dir.join(&json_abi_flat_stem).with_extension("json");
+        let file = File::create(json_abi_flat_path)?;
+        let res = if minify_json_abi {
+            serde_json::to_writer(&file, &compiled.json_abi_flat)
+        } else {
+            serde_json::to_writer_pretty(&file, &compiled.json_abi_flat)
+        };
+        res?;
     }
 
     info!("  Bytecode size is {} bytes.", compiled.bytecode.len());

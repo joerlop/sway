@@ -3,7 +3,9 @@ pub use function_parameter::*;
 
 use crate::{error::*, parse_tree::*, semantic_analysis::*, style::*, type_engine::*, types::*};
 use sha2::{Digest, Sha256};
-use sway_types::{Function, Ident, Property, Span, Spanned};
+use sway_types::{
+    ABIFunction, Function, Ident, Property, Span, Spanned, TypeApplication, TypeDeclaration,
+};
 
 #[derive(Clone, Debug, Eq)]
 pub struct TypedFunctionDeclaration {
@@ -109,6 +111,57 @@ impl ToJsonAbi for TypedFunctionDeclaration {
                     .get_type_parameters()
                     .map(|v| v.iter().map(TypeParameter::generate_json_abi).collect()),
             }],
+        }
+    }
+}
+
+impl ToJsonAbiFlat for TypedFunctionDeclaration {
+    type FlatOutput = ABIFunction;
+
+    fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> Self::FlatOutput {
+        let input_types = self
+            .parameters
+            .iter()
+            .map(|x| TypeDeclaration {
+                type_id: *x.type_id,
+                type_field: x.type_id.json_abi_str(),
+                components: x.type_id.generate_json_abi_flat(types),
+                type_parameters: None,
+            })
+            .collect::<Vec<_>>();
+        let output_type = TypeDeclaration {
+            type_id: *self.return_type,
+            type_field: self.return_type.json_abi_str(),
+            components: self.return_type.generate_json_abi_flat(types),
+            type_parameters: None,
+        };
+        types.extend(input_types);
+        types.push(output_type);
+        ABIFunction {
+            name: self.name.as_str().to_string(),
+            type_field: "function".to_string(),
+            inputs: self
+                .parameters
+                .iter()
+                .map(|x| TypeApplication {
+                    name: x.name.as_str().to_string(),
+                    type_field: *x.type_id,
+                    type_arguments: dbg!(x.type_id.get_type_parameters()).map(|v| {
+                        v.iter()
+                            .map(|v| v.generate_json_abi_flat(types))
+                            .collect::<Vec<_>>()
+                    }),
+                })
+                .collect(),
+            output: TypeApplication {
+                name: "".to_string(),
+                type_field: *self.return_type,
+                type_arguments: self.return_type.get_type_parameters().map(|v| {
+                    v.iter()
+                        .map(|v| v.generate_json_abi_flat(types))
+                        .collect::<Vec<_>>()
+                }),
+            },
         }
     }
 }

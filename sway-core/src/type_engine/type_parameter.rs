@@ -2,10 +2,10 @@ use crate::{
     error::*,
     semantic_analysis::*,
     type_engine::*,
-    types::{JsonAbiString, ToJsonAbi},
+    types::{JsonAbiString, ToJsonAbi, ToJsonAbiFlat},
 };
 
-use sway_types::{ident::Ident, span::Span, Spanned};
+use sway_types::{ident::Ident, span::Span, Spanned, TypeDeclaration};
 
 use std::{
     fmt,
@@ -84,6 +84,21 @@ impl ToJsonAbi for TypeParameter {
                 .get_type_parameters()
                 .map(|v| v.iter().map(TypeParameter::generate_json_abi).collect()),
         }
+    }
+}
+
+impl ToJsonAbiFlat for TypeParameter {
+    type FlatOutput = usize;
+
+    fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> usize {
+        let type_argument = TypeDeclaration {
+            type_id: *self.type_id,
+            type_field: self.type_id.json_abi_str(),
+            components: self.type_id.generate_json_abi_flat(types),
+            type_parameters: None,
+        };
+        types.push(type_argument);
+        *self.type_id
     }
 }
 

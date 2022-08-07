@@ -1,5 +1,5 @@
 use std::fmt;
-use sway_types::{Span, Spanned};
+use sway_types::{Span, Spanned, TypeApplication, TypeDeclaration};
 
 use crate::types::*;
 
@@ -81,6 +81,52 @@ impl ToJsonAbi for TypeId {
                 Some(fields.iter().map(|x| x.generate_json_abi()).collect())
             }
             TypeInfo::Tuple(fields) => Some(fields.iter().map(|x| x.generate_json_abi()).collect()),
+            _ => None,
+        }
+    }
+}
+
+impl ToJsonAbiFlat for TypeId {
+    type FlatOutput = Option<Vec<TypeApplication>>;
+
+    fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> Self::FlatOutput {
+        match look_up_type_id(*self) {
+            TypeInfo::Struct { fields, .. } => {
+                let new_types = fields
+                    .iter()
+                    .map(|x| TypeDeclaration {
+                        type_id: *x.type_id,
+                        type_field: x.type_id.json_abi_str(),
+                        components: x.type_id.generate_json_abi_flat(types),
+                        type_parameters: None,
+                    })
+                    .collect::<Vec<_>>();
+                types.extend(new_types);
+                Some(
+                    fields
+                        .iter()
+                        .map(|x| TypeApplication {
+                            name: x.name.to_string(),
+                            type_field: *x.type_id,
+                            type_arguments: None,
+                        })
+                        .collect(),
+                )
+            }
+            TypeInfo::Array(type_id, _) => {
+                let element_type = TypeDeclaration {
+                    type_id: *type_id,
+                    type_field: type_id.json_abi_str(),
+                    components: type_id.generate_json_abi_flat(types),
+                    type_parameters: None,
+                };
+                types.push(element_type);
+                Some(vec![TypeApplication {
+                    name: "__array_element".to_string(),
+                    type_field: *type_id,
+                    type_arguments: None,
+                }])
+            }
             _ => None,
         }
     }

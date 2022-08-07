@@ -26,7 +26,7 @@ use sway_core::{
     semantic_analysis::namespace, source_map::SourceMap, types::*, BytecodeCompilationResult,
     CompileAstResult, CompileError, CompileResult, ParseProgram, TreeType,
 };
-use sway_types::JsonABI;
+use sway_types::{JsonABI, ProgramABI};
 use sway_utils::constants;
 use tracing::info;
 use url::Url;
@@ -48,6 +48,7 @@ pub struct PinnedId(u64);
 /// The result of successfully compiling a package.
 pub struct Compiled {
     pub json_abi: JsonABI,
+    pub json_abi_flat: ProgramABI,
     pub storage_slots: Vec<StorageSlot>,
     pub bytecode: Vec<u8>,
     pub tree_type: TreeType,
@@ -1588,6 +1589,12 @@ pub fn compile(
             }
 
             let json_abi = time_expr!("generate JSON ABI", typed_program.kind.generate_json_abi());
+            let mut types = vec![];
+            let json_abi_flat = time_expr!(
+                "generate JSON ABI flat",
+                typed_program.kind.generate_json_abi_flat(&mut types)
+            );
+
             let storage_slots = typed_program.storage_slots.clone();
             let tree_type = typed_program.kind.tree_type();
             match tree_type {
@@ -1599,6 +1606,7 @@ pub fn compile(
                     let lib_namespace = typed_program.root.namespace.clone();
                     let compiled = Compiled {
                         json_abi,
+                        json_abi_flat,
                         storage_slots,
                         bytecode,
                         tree_type,
@@ -1622,6 +1630,7 @@ pub fn compile(
                             let bytecode = bytes;
                             let compiled = Compiled {
                                 json_abi,
+                                json_abi_flat,
                                 storage_slots,
                                 bytecode,
                                 tree_type,
@@ -1654,6 +1663,10 @@ pub fn build(plan: &BuildPlan, profile: &BuildProfile) -> anyhow::Result<(Compil
     let mut namespace_map = Default::default();
     let mut source_map = SourceMap::new();
     let mut json_abi = vec![];
+    let mut json_abi_flat = ProgramABI {
+        types: vec![],
+        functions: vec![],
+    };
     let mut storage_slots = vec![];
     let mut bytecode = vec![];
     let mut tree_type = None;
@@ -1667,6 +1680,7 @@ pub fn build(plan: &BuildPlan, profile: &BuildProfile) -> anyhow::Result<(Compil
             namespace_map.insert(node, namespace.into());
         }
         json_abi.extend(compiled.json_abi);
+        json_abi_flat = compiled.json_abi_flat;
         storage_slots.extend(compiled.storage_slots);
         bytecode = compiled.bytecode;
         tree_type = Some(compiled.tree_type);
@@ -1677,6 +1691,7 @@ pub fn build(plan: &BuildPlan, profile: &BuildProfile) -> anyhow::Result<(Compil
     let compiled = Compiled {
         bytecode,
         json_abi,
+        json_abi_flat,
         storage_slots,
         tree_type,
     };
