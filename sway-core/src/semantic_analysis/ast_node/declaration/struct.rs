@@ -145,6 +145,7 @@ impl TypedStructDeclaration {
 pub struct TypedStructField {
     pub name: Ident,
     pub type_id: TypeId,
+    pub generic_type_id: TypeId,
     pub(crate) span: Span,
 }
 
@@ -201,7 +202,7 @@ impl TypedStructField {
         let mut errors = vec![];
         let r#type = check!(
             ctx.resolve_type_with_self(
-                insert_type(field.type_info),
+                insert_type(field.type_info.clone()),
                 &field.type_span,
                 EnforceTypeArguments::Yes,
                 None
@@ -213,6 +214,7 @@ impl TypedStructField {
         let field = TypedStructField {
             name: field.name,
             type_id: r#type,
+            generic_type_id: insert_type(field.type_info),
             span: field.span,
         };
         ok(field, warnings, errors)

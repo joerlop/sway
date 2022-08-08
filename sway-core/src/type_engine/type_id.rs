@@ -95,9 +95,9 @@ impl ToJsonAbiFlat for TypeId {
                 let new_types = fields
                     .iter()
                     .map(|x| TypeDeclaration {
-                        type_id: *x.type_id,
-                        type_field: x.type_id.json_abi_str(),
-                        components: x.type_id.generate_json_abi_flat(types),
+                        type_id: *x.generic_type_id,
+                        type_field: x.generic_type_id.json_abi_str(),
+                        components: x.generic_type_id.generate_json_abi_flat(types),
                         type_parameters: None,
                     })
                     .collect::<Vec<_>>();
@@ -107,7 +107,7 @@ impl ToJsonAbiFlat for TypeId {
                         .iter()
                         .map(|x| TypeApplication {
                             name: x.name.to_string(),
-                            type_field: *x.type_id,
+                            type_field: *x.generic_type_id,
                             type_arguments: None,
                         })
                         .collect(),
