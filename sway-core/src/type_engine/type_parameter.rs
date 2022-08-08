@@ -94,7 +94,7 @@ impl ToJsonAbiFlat for TypeParameter {
         let type_argument = TypeDeclaration {
             type_id: *self.type_id,
             type_field: self.type_id.json_abi_str(),
-            components: self.type_id.generate_json_abi_flat(types),
+            components: self.type_id.generate_json_abi_flat(types, self.type_id),
             type_parameters: None,
         };
         types.push(type_argument);

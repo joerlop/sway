@@ -125,14 +125,16 @@ impl ToJsonAbiFlat for TypedFunctionDeclaration {
             .map(|x| TypeDeclaration {
                 type_id: *x.type_id,
                 type_field: x.type_id.json_abi_str(),
-                components: x.type_id.generate_json_abi_flat(types),
+                components: x.type_id.generate_json_abi_flat(types, x.type_id),
                 type_parameters: None,
             })
             .collect::<Vec<_>>();
         let output_type = TypeDeclaration {
             type_id: *self.return_type,
             type_field: self.return_type.json_abi_str(),
-            components: self.return_type.generate_json_abi_flat(types),
+            components: self
+                .return_type
+                .generate_json_abi_flat(types, self.return_type),
             type_parameters: None,
         };
         types.extend(input_types);

@@ -86,10 +86,12 @@ impl ToJsonAbi for TypeId {
     }
 }
 
-impl ToJsonAbiFlat for TypeId {
-    type FlatOutput = Option<Vec<TypeApplication>>;
-
-    fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> Self::FlatOutput {
+impl TypeId {
+    pub(crate) fn generate_json_abi_flat(
+        &self,
+        types: &mut Vec<TypeDeclaration>,
+        resolved_custom: TypeId,
+    ) -> Option<Vec<TypeApplication>> {
         match look_up_type_id(*self) {
             TypeInfo::Struct { fields, .. } => {
                 let new_types = fields
@@ -97,18 +99,23 @@ impl ToJsonAbiFlat for TypeId {
                     .map(|x| TypeDeclaration {
                         type_id: *x.generic_type_id,
                         type_field: x.generic_type_id.json_abi_str(),
-                        components: x.generic_type_id.generate_json_abi_flat(types),
+                        components: x.generic_type_id.generate_json_abi_flat(types, x.type_id),
                         type_parameters: None,
                     })
                     .collect::<Vec<_>>();
                 types.extend(new_types);
+
                 Some(
                     fields
                         .iter()
                         .map(|x| TypeApplication {
                             name: x.name.to_string(),
                             type_field: *x.generic_type_id,
-                            type_arguments: None,
+                            type_arguments: x.type_id.get_type_parameters().map(|v| {
+                                v.iter()
+                                    .map(|v| v.generate_json_abi_flat(types))
+                                    .collect::<Vec<_>>()
+                            }),
                         })
                         .collect(),
                 )
@@ -117,8 +124,12 @@ impl ToJsonAbiFlat for TypeId {
                 let element_type = TypeDeclaration {
                     type_id: *type_id,
                     type_field: type_id.json_abi_str(),
-                    components: type_id.generate_json_abi_flat(types),
-                    type_parameters: None,
+                    components: type_id.generate_json_abi_flat(types, type_id),
+                    type_parameters: None, /*type_id.get_type_parameters().map(|v| {
+                                               v.iter()
+                                                   .map(|v| v.generate_json_abi_flat(types))
+                                                   .collect::<Vec<_>>()
+                                           })*/
                 };
                 types.push(element_type);
                 Some(vec![TypeApplication {
@@ -126,6 +137,49 @@ impl ToJsonAbiFlat for TypeId {
                     type_field: *type_id,
                     type_arguments: None,
                 }])
+            }
+            TypeInfo::Custom {
+                name,
+                type_arguments,
+            } => {
+                match look_up_type_id(resolved_custom) {
+                    TypeInfo::Struct { fields, .. } => {
+                        let new_types = fields
+                            .iter()
+                            .map(|x| TypeDeclaration {
+                                type_id: *x.generic_type_id,
+                                type_field: x.generic_type_id.json_abi_str(),
+                                components: x
+                                    .generic_type_id
+                                    .generate_json_abi_flat(types, x.type_id),
+                                type_parameters: None,
+                            })
+                            .collect::<Vec<_>>();
+                        types.extend(new_types);
+
+                        Some(
+                            fields
+                                .iter()
+                                .map(|x| TypeApplication {
+                                    name: x.name.to_string(),
+                                    type_field: *x.generic_type_id,
+                                    type_arguments: x.type_id.get_type_parameters().map(|v| {
+                                        v.iter()
+                                            .map(|v| v.generate_json_abi_flat(types))
+                                            .collect::<Vec<_>>()
+                                    }),
+                                })
+                                .collect(),
+                        )
+                    }
+                    _ => None,
+                }
+
+                //                dbg!(name);
+                //                dbg!(type_arguments);
+                //                dbg!(self);
+                //                dbg!(resolved_custom);
+                //                None
             }
             _ => None,
         }
