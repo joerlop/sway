@@ -1,5 +1,6 @@
 use core::mem;
 use extension_trait::extension_trait;
+use itertools::Itertools;
 use num_bigint::BigUint;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -183,9 +184,14 @@ pub fn lex_commented(
             match char_indices.peek() {
                 Some((_, '/')) => {
                     let _ = char_indices.next();
-                    let doc_style = match (char_indices.next(), char_indices.peek()) {
+                    let mut peeker = char_indices.by_ref().multipeek();
+                    let doc_style = match (peeker.next(), peeker.peek()) {
                         // `//!` is an inner line doc comment.
-                        (Some((_, '!')), _) => Some(DocStyle::Inner),
+                        (Some((_, '!')), _) => {
+                            // TODO: Add support for inner line doc comments.
+                            // Some(DocStyle::Inner)
+                            None
+                        }
                         // `////` (more than 3 slashes) is not considered a doc comment.
                         (Some((_, '/')), Some((_, '/'))) => None,
                         // `///` is an outer line doc comment.
@@ -860,12 +866,14 @@ fn span_until(
 mod tests {
     use super::lex_commented;
     use crate::priv_prelude::*;
+    use assert_matches::assert_matches;
     use std::sync::Arc;
-    use sway_ast::token::{CommentedTokenTree, CommentedTree};
+    use sway_ast::token::{Comment, CommentedTokenTree, CommentedTree, DocStyle};
 
     #[test]
     fn lex_commented_token_stream() {
         let input = r#"
+        //
         // Single-line comment.
         struct Foo {
             /* multi-
@@ -879,6 +887,7 @@ mod tests {
         let path = None;
         let stream = lex_commented(&Arc::from(input), start, end, path).unwrap();
         let mut tts = stream.token_trees().iter();
+        assert_eq!(tts.next().unwrap().span().as_str(), "//");
         assert_eq!(
             tts.next().unwrap().span().as_str(),
             "// Single-line comment."
@@ -902,5 +911,51 @@ mod tests {
             assert!(tts.next().is_none());
         }
         assert!(tts.next().is_none());
+    }
+
+    #[test]
+    fn lex_doc_strings() {
+        let input = r#"
+        //none
+        ////none
+        //!inner
+        ///outer
+        "#;
+        let start = 0;
+        let end = input.len();
+        let path = None;
+        let stream = lex_commented(&Arc::from(input), start, end, path).unwrap();
+        let mut tts = stream.token_trees().iter();
+        assert_matches!(
+            tts.next(),
+            Some(CommentedTokenTree::Comment(Comment {
+                doc_style: None,
+                span
+            })) if span.as_str() ==  "//none"
+        );
+        assert_matches!(
+            tts.next(),
+            Some(CommentedTokenTree::Comment(Comment {
+                doc_style: None,
+                span
+            })) if span.as_str() ==  "////none"
+        );
+        assert_matches!(
+            tts.next(),
+            Some(CommentedTokenTree::Comment(Comment {
+                // TODO: Add support for inner line doc comments.
+                // doc_style: DocStyle::Inner,
+                doc_style: None,
+                span
+            })) if span.as_str() ==  "//!inner"
+        );
+        assert_matches!(
+            tts.next(),
+            Some(CommentedTokenTree::Comment(Comment {
+                doc_style: Some(DocStyle::Outer),
+                span
+            })) if span.as_str() ==  "///outer"
+        );
+        assert_eq!(tts.next(), None);
     }
 }
