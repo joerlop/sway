@@ -7,10 +7,10 @@ pub struct TypedCodeBlock {
 }
 
 impl CopyTypes for TypedCodeBlock {
-    fn copy_types(&mut self, type_mapping: &TypeMapping) {
+    fn copy_types(&mut self, type_engine: &mut TypeEngine, type_mapping: &TypeMapping) {
         self.contents
             .iter_mut()
-            .for_each(|x| x.copy_types(type_mapping));
+            .for_each(|x| x.copy_types(type_engine, type_mapping));
     }
 }
 
@@ -73,7 +73,8 @@ impl TypedCodeBlock {
         let typed_code_block = TypedCodeBlock {
             contents: evaluated_contents,
         };
-        let type_id = return_type.unwrap_or_else(|| insert_type(TypeInfo::Tuple(Vec::new())));
+        let type_id =
+            return_type.unwrap_or_else(|| ctx.type_engine.insert_type(TypeInfo::Tuple(Vec::new())));
         ok((typed_code_block, type_id), warnings, errors)
     }
 }

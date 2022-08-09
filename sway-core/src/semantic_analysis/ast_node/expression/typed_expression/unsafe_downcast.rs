@@ -5,7 +5,7 @@ use crate::{
         ast_node::expression::match_expression::MatchReqMap, IsConstant, TypedEnumVariant,
         TypedExpressionVariant,
     },
-    type_system::{insert_type, IntegerBits},
+    type_system::IntegerBits,
     Literal, TypeInfo,
 };
 

@@ -8,7 +8,7 @@ use crate::{
         },
         IsConstant, TypeCheckContext, TypedExpression, TypedExpressionVariant,
     },
-    type_system::{insert_type, TypeId},
+    type_system::TypeId,
     CompileError, CompileResult, LazyOp, Literal, MatchBranch, TypeInfo,
 };
 
@@ -94,7 +94,7 @@ impl TypedMatchExpression {
                             LazyOp::And,
                             new_condition,
                             inner_condition,
-                            insert_type(TypeInfo::Boolean),
+                            ctx.type_engine.insert_type(TypeInfo::Boolean),
                             joined_span,
                         )
                     }
@@ -125,7 +125,7 @@ impl TypedMatchExpression {
                 (Some(prev_if_exp), None) => {
                     let conditional = TypedExpression {
                         expression: TypedExpressionVariant::Literal(Literal::Boolean(true)),
-                        return_type: insert_type(TypeInfo::Boolean),
+                        return_type: ctx.type_engine.insert_type(TypeInfo::Boolean),
                         is_constant: IsConstant::No,
                         span: result_span.clone(),
                     };

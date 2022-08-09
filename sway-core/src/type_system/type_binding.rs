@@ -3,7 +3,7 @@ use sway_types::{Span, Spanned};
 use crate::{
     error::{err, ok},
     semantic_analysis::TypeCheckContext,
-    type_system::{insert_type, EnforceTypeArguments},
+    type_system::EnforceTypeArguments,
     CallPath, CompileResult, TypeInfo, TypedDeclaration,
 };
 
@@ -111,12 +111,12 @@ impl TypeBinding<CallPath<(TypeInfo, Span)>> {
         // resolve the type of the type info object
         let type_id = check!(
             ctx.resolve_type_with_self(
-                insert_type(type_info),
+                ctx.type_engine.insert_type(type_info),
                 &type_info_span,
                 EnforceTypeArguments::No,
                 Some(&type_info_prefix)
             ),
-            insert_type(TypeInfo::ErrorRecovery),
+            ctx.type_engine.insert_type(TypeInfo::ErrorRecovery),
             warnings,
             errors
         );

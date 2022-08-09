@@ -23,12 +23,13 @@ pub struct TypedIntrinsicFunctionKind {
 }
 
 impl CopyTypes for TypedIntrinsicFunctionKind {
-    fn copy_types(&mut self, type_mapping: &TypeMapping) {
+    fn copy_types(&mut self, type_engine: &mut TypeEngine, type_mapping: &TypeMapping) {
         for arg in &mut self.arguments {
-            arg.copy_types(type_mapping);
+            arg.copy_types(type_engine, type_mapping);
         }
         for targ in &mut self.type_arguments {
-            targ.type_id.update_type(type_mapping, &targ.span);
+            targ.type_id
+                .update_type(type_engine, type_mapping, &targ.span);
         }
     }
 }
@@ -92,7 +93,7 @@ impl TypedIntrinsicFunctionKind {
                 }
                 let ctx = ctx
                     .with_help_text("")
-                    .with_type_annotation(insert_type(TypeInfo::Unknown));
+                    .with_type_annotation(ctx.type_engine.insert_type(TypeInfo::Unknown));
                 let exp = check!(
                     TypedExpression::type_check(ctx, arguments[0].clone()),
                     return err(warnings, errors),
@@ -105,7 +106,9 @@ impl TypedIntrinsicFunctionKind {
                     type_arguments: vec![],
                     span,
                 };
-                let return_type = insert_type(TypeInfo::UnsignedInteger(IntegerBits::SixtyFour));
+                let return_type = ctx
+                    .type_engine
+                    .insert_type(TypeInfo::UnsignedInteger(IntegerBits::SixtyFour));
                 (intrinsic_function, return_type)
             }
             Intrinsic::SizeOfType => {
@@ -128,12 +131,13 @@ impl TypedIntrinsicFunctionKind {
                 let targ = type_arguments[0].clone();
                 let type_id = check!(
                     ctx.resolve_type_with_self(
-                        insert_type(resolve_type(targ.type_id, &targ.span).unwrap()),
+                        ctx.type_engine
+                            .insert_type(resolve_type(targ.type_id, &targ.span).unwrap()),
                         &targ.span,
                         EnforceTypeArguments::Yes,
                         None
                     ),
-                    insert_type(TypeInfo::ErrorRecovery),
+                    ctx.type_engine.insert_type(TypeInfo::ErrorRecovery),
                     warnings,
                     errors,
                 );
@@ -146,7 +150,9 @@ impl TypedIntrinsicFunctionKind {
                     }],
                     span,
                 };
-                let return_type = insert_type(TypeInfo::UnsignedInteger(IntegerBits::SixtyFour));
+                let return_type = ctx
+                    .type_engine
+                    .insert_type(TypeInfo::UnsignedInteger(IntegerBits::SixtyFour));
                 (intrinsic_function, return_type)
             }
             Intrinsic::IsReferenceType => {
@@ -161,12 +167,13 @@ impl TypedIntrinsicFunctionKind {
                 let targ = type_arguments[0].clone();
                 let type_id = check!(
                     ctx.resolve_type_with_self(
-                        insert_type(resolve_type(targ.type_id, &targ.span).unwrap()),
+                        ctx.type_engine
+                            .insert_type(resolve_type(targ.type_id, &targ.span).unwrap()),
                         &targ.span,
                         EnforceTypeArguments::Yes,
                         None
                     ),
-                    insert_type(TypeInfo::ErrorRecovery),
+                    ctx.type_engine.insert_type(TypeInfo::ErrorRecovery),
                     warnings,
                     errors,
                 );
@@ -179,7 +186,10 @@ impl TypedIntrinsicFunctionKind {
                     }],
                     span,
                 };
-                (intrinsic_function, insert_type(TypeInfo::Boolean))
+                (
+                    intrinsic_function,
+                    ctx.type_engine.insert_type(TypeInfo::Boolean),
+                )
             }
             Intrinsic::GetStorageKey => (
                 TypedIntrinsicFunctionKind {
@@ -188,7 +198,7 @@ impl TypedIntrinsicFunctionKind {
                     type_arguments: vec![],
                     span,
                 },
-                insert_type(TypeInfo::B256),
+                ctx.type_engine.insert_type(TypeInfo::B256),
             ),
             Intrinsic::Eq => {
                 if arguments.len() != 2 {
@@ -201,7 +211,7 @@ impl TypedIntrinsicFunctionKind {
                 }
                 let mut ctx = ctx
                     .by_ref()
-                    .with_type_annotation(insert_type(TypeInfo::Unknown));
+                    .with_type_annotation(ctx.type_engine.insert_type(TypeInfo::Unknown));
 
                 let lhs = arguments[0].clone();
                 let lhs = check!(
@@ -242,7 +252,7 @@ impl TypedIntrinsicFunctionKind {
                         type_arguments: vec![],
                         span,
                     },
-                    insert_type(TypeInfo::Boolean),
+                    ctx.type_engine.insert_type(TypeInfo::Boolean),
                 )
             }
             Intrinsic::Gtf => {
@@ -267,7 +277,7 @@ impl TypedIntrinsicFunctionKind {
                 // Type check the first argument which is the index
                 let mut ctx = ctx
                     .by_ref()
-                    .with_type_annotation(insert_type(TypeInfo::Unknown));
+                    .with_type_annotation(ctx.type_engine.insert_type(TypeInfo::Unknown));
                 let index = check!(
                     TypedExpression::type_check(ctx.by_ref(), arguments[0].clone()),
                     return err(warnings, errors),
@@ -278,7 +288,7 @@ impl TypedIntrinsicFunctionKind {
                 // Type check the second argument which is the tx field ID
                 let mut ctx = ctx
                     .by_ref()
-                    .with_type_annotation(insert_type(TypeInfo::Unknown));
+                    .with_type_annotation(ctx.type_engine.insert_type(TypeInfo::Unknown));
                 let tx_field_id = check!(
                     TypedExpression::type_check(ctx.by_ref(), arguments[1].clone()),
                     return err(warnings, errors),
@@ -313,12 +323,13 @@ impl TypedIntrinsicFunctionKind {
                 let targ = type_arguments[0].clone();
                 let type_id = check!(
                     ctx.resolve_type_with_self(
-                        insert_type(resolve_type(targ.type_id, &targ.span).unwrap()),
+                        ctx.type_engine
+                            .insert_type(resolve_type(targ.type_id, &targ.span).unwrap()),
                         &targ.span,
                         EnforceTypeArguments::Yes,
                         None
                     ),
-                    insert_type(TypeInfo::ErrorRecovery),
+                    ctx.type_engine.insert_type(TypeInfo::ErrorRecovery),
                     warnings,
                     errors,
                 );
@@ -347,7 +358,7 @@ impl TypedIntrinsicFunctionKind {
                 }
                 let ctx = ctx
                     .with_help_text("")
-                    .with_type_annotation(insert_type(TypeInfo::Unknown));
+                    .with_type_annotation(ctx.type_engine.insert_type(TypeInfo::Unknown));
                 let exp = check!(
                     TypedExpression::type_check(ctx, arguments[0].clone()),
                     return err(warnings, errors),
@@ -372,7 +383,9 @@ impl TypedIntrinsicFunctionKind {
                     type_arguments: vec![],
                     span,
                 };
-                let return_type = insert_type(TypeInfo::UnsignedInteger(IntegerBits::SixtyFour));
+                let return_type = ctx
+                    .type_engine
+                    .insert_type(TypeInfo::UnsignedInteger(IntegerBits::SixtyFour));
                 (intrinsic_function, return_type)
             }
         };

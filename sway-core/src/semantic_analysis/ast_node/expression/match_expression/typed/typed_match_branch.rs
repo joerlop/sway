@@ -7,7 +7,6 @@ use crate::{
         TypeCheckContext, TypedAstNode, TypedAstNodeContent, TypedCodeBlock, TypedExpression,
         TypedExpressionVariant, TypedVariableDeclaration, VariableMutability,
     },
-    type_system::insert_type,
     types::DeterministicallyAborts,
     CompileResult, MatchBranch, TypeInfo, TypedDeclaration,
 };
@@ -80,7 +79,7 @@ impl TypedMatchBranch {
         let typed_result = {
             let ctx = ctx
                 .by_ref()
-                .with_type_annotation(insert_type(TypeInfo::Unknown));
+                .with_type_annotation(ctx.type_engine.insert_type(TypeInfo::Unknown));
             check!(
                 TypedExpression::type_check(ctx, result),
                 return err(warnings, errors),

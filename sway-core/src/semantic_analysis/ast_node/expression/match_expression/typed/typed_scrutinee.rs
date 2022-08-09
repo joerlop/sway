@@ -3,7 +3,7 @@ use sway_types::{Ident, Span, Spanned};
 use crate::{
     error::{err, ok},
     semantic_analysis::{TypeCheckContext, TypedEnumVariant},
-    type_system::{insert_type, CreateTypeId, EnforceTypeArguments, TypeArgument, TypeId},
+    type_system::{CreateTypeId, EnforceTypeArguments, TypeArgument, TypeId},
     CompileError, CompileResult, Literal, Scrutinee, StructScrutineeField, TypeInfo,
 };
 
@@ -20,7 +20,6 @@ pub(crate) enum TypedScrutineeVariant {
     Literal(Literal),
     Variable(Ident),
     StructScrutinee(Vec<TypedStructScrutineeField>),
-    #[allow(dead_code)]
     EnumScrutinee {
         variant: TypedEnumVariant,
         value: Box<TypedScrutinee>,
@@ -45,17 +44,17 @@ impl TypedScrutinee {
         let typed_scrutinee = match scrutinee {
             Scrutinee::CatchAll { span } => TypedScrutinee {
                 variant: TypedScrutineeVariant::CatchAll,
-                type_id: insert_type(TypeInfo::Unknown),
+                type_id: ctx.type_engine.insert_type(TypeInfo::Unknown),
                 span,
             },
             Scrutinee::Literal { value, span } => TypedScrutinee {
                 variant: TypedScrutineeVariant::Literal(value.clone()),
-                type_id: insert_type(value.to_typeinfo()),
+                type_id: ctx.type_engine.insert_type(value.to_typeinfo()),
                 span,
             },
             Scrutinee::Variable { name, span } => TypedScrutinee {
                 variant: TypedScrutineeVariant::Variable(name),
-                type_id: insert_type(TypeInfo::Unknown),
+                type_id: ctx.type_engine.insert_type(TypeInfo::Unknown),
                 span,
             },
             Scrutinee::StructScrutinee {
@@ -223,7 +222,7 @@ impl TypedScrutinee {
                 }
                 TypedScrutinee {
                     variant: TypedScrutineeVariant::Tuple(typed_elems.clone()),
-                    type_id: insert_type(TypeInfo::Tuple(
+                    type_id: ctx.type_engine.insert_type(TypeInfo::Tuple(
                         typed_elems
                             .into_iter()
                             .map(|x| TypeArgument {
