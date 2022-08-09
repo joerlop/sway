@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use sway_ast::literal::{LitChar, LitInt, LitIntType, LitString, Literal};
 use sway_ast::token::{
-    Comment, CommentedGroup, CommentedTokenStream, CommentedTokenTree, Delimiter, Punct, PunctKind,
-    Spacing, TokenStream,
+    Comment, CommentedGroup, CommentedTokenStream, CommentedTokenTree, Delimiter, DocStyle, Punct,
+    PunctKind, Spacing, TokenStream,
 };
 use sway_types::{Ident, Span, Spanned};
 use thiserror::Error;
@@ -183,10 +183,19 @@ pub fn lex_commented(
             match char_indices.peek() {
                 Some((_, '/')) => {
                     let _ = char_indices.next();
+                    let doc_style = match (char_indices.next(), char_indices.peek()) {
+                        // `//!` is an inner line doc comment.
+                        (Some((_, '!')), _) => Some(DocStyle::Inner),
+                        // `////` (more than 3 slashes) is not considered a doc comment.
+                        (Some((_, '/')), Some((_, '/'))) => None,
+                        // `///` is an outer line doc comment.
+                        (Some((_, '/')), _) => Some(DocStyle::Outer),
+                        _ => None,
+                    };
                     for (end, character) in char_indices.by_ref() {
                         if character == '\n' {
                             let span = Span::new(src.clone(), index, end, path.clone()).unwrap();
-                            let comment = Comment { span };
+                            let comment = Comment { span, doc_style };
                             token_trees.push(comment.into());
                             break;
                         }
@@ -220,7 +229,10 @@ pub fn lex_commented(
                                     let end = slash_ix + '/'.len_utf8();
                                     let span =
                                         Span::new(src.clone(), start, end, path.clone()).unwrap();
-                                    let comment = Comment { span };
+                                    let comment = Comment {
+                                        span,
+                                        doc_style: None,
+                                    };
                                     token_trees.push(comment.into());
                                     if unclosed_indices.is_empty() {
                                         break;

@@ -109,8 +109,15 @@ impl Delimiter {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
+pub enum DocStyle {
+    Outer,
+    Inner,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct Comment {
     pub span: Span,
+    pub doc_style: Option<DocStyle>,
 }
 
 impl Spanned for Comment {
