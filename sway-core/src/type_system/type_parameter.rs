@@ -15,6 +15,7 @@ use std::{
 #[derive(Debug, Clone, Eq)]
 pub struct TypeParameter {
     pub(crate) type_id: TypeId,
+    pub(crate) generic_type_id: TypeId,
     pub(crate) name_ident: Ident,
     pub(crate) trait_constraints: Vec<TraitConstraint>,
 }
@@ -87,6 +88,21 @@ impl ToJsonAbi for TypeParameter {
     }
 }
 
+impl TypeParameter {
+    pub(crate) fn generate_json_abi_generic(&self, types: &mut Vec<TypeDeclaration>) -> usize {
+        let type_parameter = TypeDeclaration {
+            type_id: *self.generic_type_id,
+            type_field: self.generic_type_id.json_abi_str(),
+            components: self
+                .generic_type_id
+                .generate_json_abi_flat(types, self.type_id),
+            type_parameters: None,
+        };
+        types.push(type_parameter);
+        *self.generic_type_id
+    }
+}
+
 impl ToJsonAbiFlat for TypeParameter {
     type FlatOutput = usize;
 
@@ -129,6 +145,7 @@ impl TypeParameter {
         let type_parameter = TypeParameter {
             name_ident: type_parameter.name_ident,
             type_id,
+            generic_type_id: type_parameter.generic_type_id,
             trait_constraints: type_parameter.trait_constraints,
         };
         ok(type_parameter, warnings, errors)
