@@ -308,8 +308,16 @@ mod tests {
             .join("examples/storage_variables")
     }
 
+    fn local_test_dir() -> PathBuf {
+        env::current_dir()
+            //.unwrap()
+            //.parent()
+            .unwrap()
+            .join("test_programs/enums")
+    }
+
     fn load_sway_example() -> (Url, String) {
-        let manifest_dir = e2e_test_dir();
+        let manifest_dir = local_test_dir(); //e2e_test_dir();
         let src_path = manifest_dir.join("src/main.sw");
         let mut file = fs::File::open(&src_path).unwrap();
         let mut sway_program = String::new();
