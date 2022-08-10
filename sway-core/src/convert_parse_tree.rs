@@ -536,6 +536,11 @@ fn item_enum_to_enum_declaration(
 ) -> Result<EnumDeclaration, ErrorEmitted> {
     let mut errors = Vec::new();
     let span = item_enum.span();
+
+    for field in item_enum
+    .fields.clone().into_inner() {
+        eprintln!("{:#?}", field.ty.span());
+    }
     let variants = item_enum
         .fields
         .into_inner()

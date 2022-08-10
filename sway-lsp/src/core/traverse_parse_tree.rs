@@ -111,15 +111,24 @@ fn handle_declaration(declaration: &Declaration, tokens: &TokenMap) {
             }
         }
         Declaration::EnumDeclaration(enum_decl) => {
+            //eprintln!("{:#?}", enum_decl);
             tokens.insert(
                 to_ident_key(&enum_decl.name),
                 Token::from_parsed(AstToken::Declaration(declaration.clone())),
             );
             for variant in &enum_decl.variants {
-                tokens.insert(
-                    to_ident_key(&variant.name),
-                    Token::from_parsed(AstToken::EnumVariant(variant.clone())),
-                );
+                let token = Token::from_parsed(AstToken::EnumVariant(variant.clone()));
+                tokens.insert(to_ident_key(&variant.name), token.clone());
+
+                if let TypeInfo::Custom {
+                    name,
+                    type_arguments,
+                } = &variant.type_info {
+                    tokens.insert(to_ident_key(name), token.clone());
+                    if let Some(args) = type_arguments {
+                        collect_type_args(args, &token, tokens);
+                    }
+                }
             }
         }
         Declaration::Reassignment(reassignment) => {
@@ -211,24 +220,14 @@ fn handle_declaration(declaration: &Declaration, tokens: &TokenMap) {
                 let token = Token::from_parsed(AstToken::StorageField(field.clone()));
                 tokens.insert(to_ident_key(&field.name), token.clone());
 
-                match &field.type_info {
-                    TypeInfo::Tuple(args) => {
-                        for arg in args {
-                            let mut token = token.clone();
-                            token.type_def = Some(TypeDefinition::TypeId(arg.type_id));
-                            tokens.insert(to_ident_key(&Ident::new(arg.span.clone())), token);
-                        }
+                if let TypeInfo::Custom {
+                    name,
+                    type_arguments,
+                } = &field.type_info {
+                    tokens.insert(to_ident_key(name), token.clone());
+                    if let Some(args) = type_arguments {
+                        collect_type_args(args, &token, tokens);
                     }
-                    TypeInfo::Custom {
-                        name,
-                        type_arguments,
-                    } => {
-                        tokens.insert(to_ident_key(name), token.clone());
-                        if let Some(args) = type_arguments {
-                            collect_type_args(args, &token, tokens);
-                        }
-                    }
-                    _ => (),
                 }
 
                 handle_expression(&field.initializer, tokens);

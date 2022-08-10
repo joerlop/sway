@@ -14,7 +14,7 @@ pub struct EnumDeclaration {
 #[derive(Debug, Clone)]
 pub struct EnumVariant {
     pub name: Ident,
-    pub(crate) type_info: TypeInfo,
+    pub type_info: TypeInfo,
     pub(crate) tag: usize,
     pub(crate) span: Span,
 }
