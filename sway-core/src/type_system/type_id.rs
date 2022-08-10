@@ -1,5 +1,5 @@
 use std::fmt;
-use sway_types::{Span, Spanned, TypeApplication, TypeDeclaration};
+use sway_types::{JsonTypeApplication, JsonTypeDeclaration, Span, Spanned};
 
 use crate::types::*;
 
@@ -87,22 +87,22 @@ impl ToJsonAbi for TypeId {
 }
 
 impl TypeId {
-    pub(crate) fn json_type_components(
+    pub(crate) fn get_json_type_components(
         &self,
-        types: &mut Vec<TypeDeclaration>,
+        types: &mut Vec<JsonTypeDeclaration>,
         resolved_custom: TypeId,
-    ) -> Option<Vec<TypeApplication>> {
+    ) -> Option<Vec<JsonTypeApplication>> {
         match look_up_type_id(*self) {
             TypeInfo::Struct { fields, .. } => {
                 let new_types = fields
                     .iter()
-                    .map(|x| TypeDeclaration {
+                    .map(|x| JsonTypeDeclaration {
                         type_id: *x.initial_type_id,
                         type_field: x.initial_type_id.json_abi_str(),
-                        components: x.initial_type_id.json_type_components(types, x.type_id),
+                        components: x.initial_type_id.get_json_type_components(types, x.type_id),
                         type_parameters: x.type_id.get_type_parameters().map(|v| {
                             v.iter()
-                                .map(|v| v.get_type_parameters_json(types))
+                                .map(|v| v.get_json_type_parameter(types))
                                 .collect::<Vec<_>>()
                         }),
                     })
@@ -112,15 +112,12 @@ impl TypeId {
                 Some(
                     fields
                         .iter()
-                        .map(|x| TypeApplication {
+                        .map(|x| JsonTypeApplication {
                             name: x.name.to_string(),
                             type_field: *x.initial_type_id,
                             type_arguments: {
                                 match look_up_type_id(x.initial_type_id) {
-                                    TypeInfo::Custom {
-                                        name,
-                                        type_arguments,
-                                    } => type_arguments
+                                    TypeInfo::Custom { type_arguments, .. } => type_arguments
                                         .map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>()),
                                     _ => None,
                                 }
@@ -130,10 +127,10 @@ impl TypeId {
                 )
             }
             TypeInfo::Array(type_id, _) => {
-                let element_type = TypeDeclaration {
+                let element_type = JsonTypeDeclaration {
                     type_id: *type_id,
                     type_field: type_id.json_abi_str(),
-                    components: type_id.json_type_components(types, type_id),
+                    components: type_id.get_json_type_components(types, type_id),
                     type_parameters: None, /*type_id.get_type_parameters().map(|v| {
                                                v.iter()
                                                    .map(|v| v.generate_json_abi_flat(types))
@@ -141,37 +138,35 @@ impl TypeId {
                                            })*/
                 };
                 types.push(element_type);
-                Some(vec![TypeApplication {
+                Some(vec![JsonTypeApplication {
                     name: "__array_element".to_string(),
                     type_field: *type_id,
                     type_arguments: None,
                 }])
             }
-            TypeInfo::Custom {
-                name,
-                type_arguments,
-            } => match look_up_type_id(resolved_custom) {
+            TypeInfo::Custom { type_arguments, .. } => match look_up_type_id(resolved_custom) {
                 TypeInfo::Struct { fields, .. } => {
                     let new_types = fields
                         .iter()
-                        .map(|x| TypeDeclaration {
+                        .map(|x| JsonTypeDeclaration {
                             type_id: *x.initial_type_id,
                             type_field: x.initial_type_id.json_abi_str(),
-                            components: x.initial_type_id.json_type_components(types, x.type_id),
-                            type_parameters: 
-                                x.type_id.get_type_parameters().map(|v| {
-                                    v.iter()
-                                        .map(|v| v.get_type_parameters_json(types))
-                                        .collect::<Vec<_>>()
-                                }),
+                            components: x
+                                .initial_type_id
+                                .get_json_type_components(types, x.type_id),
+                            type_parameters: x.type_id.get_type_parameters().map(|v| {
+                                v.iter()
+                                    .map(|v| v.get_json_type_parameter(types))
+                                    .collect::<Vec<_>>()
+                            }),
                         })
                         .collect::<Vec<_>>();
-                    let new_type_arguments = type_arguments.clone().map(|v| {
+                    let new_type_arguments = type_arguments.map(|v| {
                         v.iter()
-                            .map(|v| TypeDeclaration {
+                            .map(|v| JsonTypeDeclaration {
                                 type_id: *v.type_id,
                                 type_field: v.type_id.json_abi_str(),
-                                components: v.type_id.json_type_components(types, v.type_id),
+                                components: v.type_id.get_json_type_components(types, v.type_id),
                                 type_parameters: None,
                             })
                             .collect::<Vec<_>>()
@@ -181,14 +176,11 @@ impl TypeId {
                     Some(
                         fields
                             .iter()
-                            .map(|x| TypeApplication {
+                            .map(|x| JsonTypeApplication {
                                 name: x.name.to_string(),
                                 type_field: *x.initial_type_id,
                                 type_arguments: match look_up_type_id(x.initial_type_id) {
-                                    TypeInfo::Custom {
-                                        name,
-                                        type_arguments,
-                                    } => type_arguments
+                                    TypeInfo::Custom { type_arguments, .. } => type_arguments
                                         .map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>()),
                                     _ => None,
                                 },

@@ -4,7 +4,8 @@ pub use function_parameter::*;
 use crate::{error::*, parse_tree::*, semantic_analysis::*, style::*, type_system::*, types::*};
 use sha2::{Digest, Sha256};
 use sway_types::{
-    ABIFunction, Function, Ident, Property, Span, Spanned, TypeApplication, TypeDeclaration,
+    Function, Ident, JsonABIFunction, JsonTypeApplication, JsonTypeDeclaration, Property, Span,
+    Spanned,
 };
 
 #[derive(Clone, Debug, Eq)]
@@ -112,63 +113,6 @@ impl ToJsonAbi for TypedFunctionDeclaration {
                     .get_type_parameters()
                     .map(|v| v.iter().map(TypeParameter::generate_json_abi).collect()),
             }],
-        }
-    }
-}
-
-impl ToJsonAbiFlat for TypedFunctionDeclaration {
-    type FlatOutput = ABIFunction;
-
-    fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> Self::FlatOutput {
-        let input_types = self
-            .parameters
-            .iter()
-            .map(|x| TypeDeclaration {
-                type_id: *x.type_id,
-                type_field: x.initial_type_id.json_abi_str(),
-                components: x.initial_type_id.json_type_components(types, x.type_id),
-                type_parameters: x.type_id.get_type_parameters().map(|v| {
-                    v.iter()
-                        .map(|v| v.get_type_parameters_json(types))
-                        .collect::<Vec<_>>()
-                }),
-            })
-            .collect::<Vec<_>>();
-        let output_type = TypeDeclaration {
-            type_id: *self.initial_return_type,
-            type_field: self.initial_return_type.json_abi_str(),
-            components: self
-                .return_type
-                .json_type_components(types, self.return_type),
-            type_parameters: None,
-        };
-        types.extend(input_types);
-        types.push(output_type);
-        ABIFunction {
-            name: self.name.as_str().to_string(),
-            type_field: "function".to_string(),
-            inputs: self
-                .parameters
-                .iter()
-                .map(|x| TypeApplication {
-                    name: x.name.as_str().to_string(),
-                    type_field: *x.type_id,
-                    type_arguments: x.type_id.get_type_parameters().map(|v| {
-                        v.iter()
-                            .map(|v| v.generate_json_abi_flat(types))
-                            .collect::<Vec<_>>()
-                    }),
-                })
-                .collect(),
-            output: TypeApplication {
-                name: "".to_string(),
-                type_field: *self.return_type,
-                type_arguments: self.return_type.get_type_parameters().map(|v| {
-                    v.iter()
-                        .map(|v| v.generate_json_abi_flat(types))
-                        .collect::<Vec<_>>()
-                }),
-            },
         }
     }
 }
@@ -360,6 +304,64 @@ impl TypedFunctionDeclaration {
             warnings,
             errors,
         )
+    }
+
+    pub(crate) fn generate_json_abi_function(
+        &self,
+        types: &mut Vec<JsonTypeDeclaration>,
+    ) -> JsonABIFunction {
+        let input_types = self
+            .parameters
+            .iter()
+            .map(|x| JsonTypeDeclaration {
+                type_id: *x.type_id,
+                type_field: x.initial_type_id.json_abi_str(),
+                components: x.initial_type_id.get_json_type_components(types, x.type_id),
+                type_parameters: x.type_id.get_type_parameters().map(|v| {
+                    v.iter()
+                        .map(|v| v.get_json_type_parameter(types))
+                        .collect::<Vec<_>>()
+                }),
+            })
+            .collect::<Vec<_>>();
+        let output_type = JsonTypeDeclaration {
+            type_id: *self.initial_return_type,
+            type_field: self.initial_return_type.json_abi_str(),
+            components: self
+                .return_type
+                .get_json_type_components(types, self.return_type),
+            type_parameters: None,
+        };
+        types.extend(input_types);
+        types.push(output_type);
+        JsonABIFunction {
+            name: self.name.as_str().to_string(),
+            type_field: "function".to_string(),
+            inputs: self
+                .parameters
+                .iter()
+                .map(|x| JsonTypeApplication {
+                    name: x.name.as_str().to_string(),
+                    type_field: *x.initial_type_id,
+                    type_arguments: match look_up_type_id(x.initial_type_id) {
+                        TypeInfo::Custom { type_arguments, .. } => {
+                            type_arguments.map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>())
+                        }
+                        _ => None,
+                    },
+                })
+                .collect(),
+            output: JsonTypeApplication {
+                name: "".to_string(),
+                type_field: *self.initial_return_type,
+                type_arguments: match look_up_type_id(self.initial_return_type) {
+                    TypeInfo::Custom { type_arguments, .. } => {
+                        type_arguments.map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>())
+                    }
+                    _ => None,
+                },
+            },
+        }
     }
 }
 

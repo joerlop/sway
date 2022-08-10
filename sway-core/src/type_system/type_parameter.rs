@@ -2,10 +2,10 @@ use crate::{
     error::*,
     semantic_analysis::*,
     type_system::*,
-    types::{JsonAbiString, ToJsonAbi, ToJsonAbiFlat},
+    types::{JsonAbiString, ToJsonAbi},
 };
 
-use sway_types::{ident::Ident, span::Span, Spanned, TypeDeclaration};
+use sway_types::{ident::Ident, span::Span, JsonTypeDeclaration, Spanned};
 
 use std::{
     fmt,
@@ -89,36 +89,6 @@ impl ToJsonAbi for TypeParameter {
 }
 
 impl TypeParameter {
-    pub(crate) fn get_type_parameters_json(&self, types: &mut Vec<TypeDeclaration>) -> usize {
-        let type_parameter = TypeDeclaration {
-            type_id: *self.initial_type_id,
-            type_field: self.initial_type_id.json_abi_str(),
-            components: self
-                .initial_type_id
-                .json_type_components(types, self.type_id),
-            type_parameters: None,
-        };
-        types.push(type_parameter);
-        *self.initial_type_id
-    }
-}
-
-impl ToJsonAbiFlat for TypeParameter {
-    type FlatOutput = usize;
-
-    fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> usize {
-        let type_argument = TypeDeclaration {
-            type_id: *self.type_id,
-            type_field: self.type_id.json_abi_str(),
-            components: self.type_id.json_type_components(types, self.type_id),
-            type_parameters: None,
-        };
-        types.push(type_argument);
-        *self.type_id
-    }
-}
-
-impl TypeParameter {
     pub(crate) fn type_check(
         ctx: TypeCheckContext,
         type_parameter: TypeParameter,
@@ -149,5 +119,18 @@ impl TypeParameter {
             trait_constraints: type_parameter.trait_constraints,
         };
         ok(type_parameter, warnings, errors)
+    }
+
+    pub(crate) fn get_json_type_parameter(&self, types: &mut Vec<JsonTypeDeclaration>) -> usize {
+        let type_parameter = JsonTypeDeclaration {
+            type_id: *self.initial_type_id,
+            type_field: self.initial_type_id.json_abi_str(),
+            components: self
+                .initial_type_id
+                .get_json_type_components(types, self.type_id),
+            type_parameters: None,
+        };
+        types.push(type_parameter);
+        *self.initial_type_id
     }
 }

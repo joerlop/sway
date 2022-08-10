@@ -10,10 +10,10 @@ use crate::{
         TypeCheckContext, TypedModule,
     },
     type_system::*,
-    types::{ToJsonAbi, ToJsonAbiFlat},
+    types::ToJsonAbi,
 };
 use fuel_tx::StorageSlot;
-use sway_types::{span::Span, ABIProgram, Ident, JsonABI, Spanned, TypeDeclaration};
+use sway_types::{span::Span, Ident, JsonABI, JsonABIProgram, JsonTypeDeclaration, Spanned};
 
 #[derive(Clone, Debug)]
 pub struct TypedProgram {
@@ -338,29 +338,6 @@ impl ToJsonAbi for TypedProgramKind {
     }
 }
 
-impl ToJsonAbiFlat for TypedProgramKind {
-    type FlatOutput = ABIProgram;
-
-    fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> Self::FlatOutput {
-        match self {
-            TypedProgramKind::Contract { abi_entries, .. } => {
-                let result = abi_entries
-                    .iter()
-                    .map(|x| x.generate_json_abi_flat(types))
-                    .collect();
-                ABIProgram {
-                    types: types.to_vec(),
-                    functions: result,
-                }
-            }
-            _ => ABIProgram {
-                types: vec![],
-                functions: vec![],
-            },
-        }
-    }
-}
-
 impl TypedProgramKind {
     /// The parse tree type associated with this program kind.
     pub fn tree_type(&self) -> TreeType {
@@ -369,6 +346,28 @@ impl TypedProgramKind {
             TypedProgramKind::Library { name } => TreeType::Library { name: name.clone() },
             TypedProgramKind::Predicate { .. } => TreeType::Predicate,
             TypedProgramKind::Script { .. } => TreeType::Script,
+        }
+    }
+
+    pub fn generate_json_abi_program(
+        &self,
+        types: &mut Vec<JsonTypeDeclaration>,
+    ) -> JsonABIProgram {
+        match self {
+            TypedProgramKind::Contract { abi_entries, .. } => {
+                let result = abi_entries
+                    .iter()
+                    .map(|x| x.generate_json_abi_function(types))
+                    .collect();
+                JsonABIProgram {
+                    types: types.to_vec(),
+                    functions: result,
+                }
+            }
+            _ => JsonABIProgram {
+                types: vec![],
+                functions: vec![],
+            },
         }
     }
 }

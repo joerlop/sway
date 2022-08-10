@@ -200,9 +200,10 @@ impl TypedStructField {
     pub(crate) fn type_check(mut ctx: TypeCheckContext, field: StructField) -> CompileResult<Self> {
         let mut warnings = vec![];
         let mut errors = vec![];
+        let initial_type_id = insert_type(field.type_info);
         let r#type = check!(
             ctx.resolve_type_with_self(
-                insert_type(field.type_info.clone()),
+                initial_type_id,
                 &field.type_span,
                 EnforceTypeArguments::Yes,
                 None
@@ -214,7 +215,7 @@ impl TypedStructField {
         let field = TypedStructField {
             name: field.name,
             type_id: r#type,
-            initial_type_id: insert_type(field.type_info),
+            initial_type_id,
             span: field.span,
         };
         ok(field, warnings, errors)

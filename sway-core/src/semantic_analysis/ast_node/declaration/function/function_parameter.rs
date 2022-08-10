@@ -49,7 +49,7 @@ impl TypedFunctionParameter {
         let mut errors = vec![];
         let type_id = check!(
             ctx.resolve_type_with_self(
-                dbg!(parameter.type_id),
+                parameter.type_id,
                 &parameter.type_span,
                 EnforceTypeArguments::Yes,
                 None
