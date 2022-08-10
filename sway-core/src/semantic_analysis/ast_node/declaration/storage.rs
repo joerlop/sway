@@ -142,7 +142,7 @@ impl TypedStorageDeclaration {
                  }| TypedStructField {
                     name: name.clone(),
                     type_id: *r#type,
-                    generic_type_id: *r#type,
+                    initial_type_id: *r#type,
                     span: span.clone(),
                 },
             )

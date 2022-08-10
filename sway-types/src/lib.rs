@@ -374,11 +374,9 @@ pub struct Property {
 }
 
 /// Flat JSON ABI
-
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ProgramABI {
-    #[serde(rename = "type")]
+pub struct ABIProgram {
     pub types: Vec<TypeDeclaration>,
     pub functions: Vec<ABIFunction>,
 }

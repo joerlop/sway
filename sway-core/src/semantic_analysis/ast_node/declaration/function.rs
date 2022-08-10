@@ -14,6 +14,7 @@ pub struct TypedFunctionDeclaration {
     pub parameters: Vec<TypedFunctionParameter>,
     pub span: Span,
     pub return_type: TypeId,
+    pub initial_return_type: TypeId,
     pub(crate) type_parameters: Vec<TypeParameter>,
     /// Used for error messages -- the span pointing to the return type
     /// annotation of the function
@@ -124,21 +125,21 @@ impl ToJsonAbiFlat for TypedFunctionDeclaration {
             .iter()
             .map(|x| TypeDeclaration {
                 type_id: *x.type_id,
-                type_field: x.type_id.json_abi_str(),
-                components: x.type_id.generate_json_abi_flat(types, x.type_id),
+                type_field: x.initial_type_id.json_abi_str(),
+                components: x.initial_type_id.json_type_components(types, x.type_id),
                 type_parameters: x.type_id.get_type_parameters().map(|v| {
                     v.iter()
-                        .map(|v| v.generate_json_abi_generic(types))
+                        .map(|v| v.get_type_parameters_json(types))
                         .collect::<Vec<_>>()
                 }),
             })
             .collect::<Vec<_>>();
         let output_type = TypeDeclaration {
-            type_id: *self.return_type,
-            type_field: self.return_type.json_abi_str(),
+            type_id: *self.initial_return_type,
+            type_field: self.initial_return_type.json_abi_str(),
             components: self
                 .return_type
-                .generate_json_abi_flat(types, self.return_type),
+                .json_type_components(types, self.return_type),
             type_parameters: None,
         };
         types.extend(input_types);
@@ -221,9 +222,10 @@ impl TypedFunctionDeclaration {
         }
 
         // type check the return type
+        let initial_return_type = insert_type(return_type);
         let return_type = check!(
             ctx.resolve_type_with_self(
-                insert_type(return_type),
+                initial_return_type,
                 &return_type_span,
                 EnforceTypeArguments::Yes,
                 None
@@ -278,6 +280,7 @@ impl TypedFunctionDeclaration {
             parameters: new_parameters,
             span,
             return_type,
+            initial_return_type,
             type_parameters: new_type_parameters,
             return_type_span,
             visibility,

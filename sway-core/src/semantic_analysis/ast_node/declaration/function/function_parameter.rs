@@ -15,6 +15,7 @@ pub struct TypedFunctionParameter {
     pub name: Ident,
     pub is_mutable: bool,
     pub type_id: TypeId,
+    pub initial_type_id: TypeId,
     pub type_span: Span,
 }
 
@@ -48,7 +49,7 @@ impl TypedFunctionParameter {
         let mut errors = vec![];
         let type_id = check!(
             ctx.resolve_type_with_self(
-                parameter.type_id,
+                dbg!(parameter.type_id),
                 &parameter.type_span,
                 EnforceTypeArguments::Yes,
                 None
@@ -79,6 +80,7 @@ impl TypedFunctionParameter {
             name: parameter.name,
             is_mutable: parameter.is_mutable,
             type_id,
+            initial_type_id: parameter.type_id,
             type_span: parameter.type_span,
         };
         ok(parameter, warnings, errors)

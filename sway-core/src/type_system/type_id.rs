@@ -87,7 +87,7 @@ impl ToJsonAbi for TypeId {
 }
 
 impl TypeId {
-    pub(crate) fn generate_json_abi_flat(
+    pub(crate) fn json_type_components(
         &self,
         types: &mut Vec<TypeDeclaration>,
         resolved_custom: TypeId,
@@ -97,12 +97,12 @@ impl TypeId {
                 let new_types = fields
                     .iter()
                     .map(|x| TypeDeclaration {
-                        type_id: *x.generic_type_id,
-                        type_field: x.generic_type_id.json_abi_str(),
-                        components: x.generic_type_id.generate_json_abi_flat(types, x.type_id),
+                        type_id: *x.initial_type_id,
+                        type_field: x.initial_type_id.json_abi_str(),
+                        components: x.initial_type_id.json_type_components(types, x.type_id),
                         type_parameters: x.type_id.get_type_parameters().map(|v| {
                             v.iter()
-                                .map(|v| v.generate_json_abi_generic(types))
+                                .map(|v| v.get_type_parameters_json(types))
                                 .collect::<Vec<_>>()
                         }),
                     })
@@ -114,23 +114,17 @@ impl TypeId {
                         .iter()
                         .map(|x| TypeApplication {
                             name: x.name.to_string(),
-                            type_field: *x.generic_type_id,
+                            type_field: *x.initial_type_id,
                             type_arguments: {
-                                match look_up_type_id(x.generic_type_id) {
+                                match look_up_type_id(x.initial_type_id) {
                                     TypeInfo::Custom {
-                                        name, 
-                                        type_arguments
-                                    } => {
-                                        type_arguments.map(|v| {
-                                            v.iter()
-                                                .map(|v| *v.type_id)
-                                                .collect::<Vec<_>>()
-                                        })
-                                    }
+                                        name,
+                                        type_arguments,
+                                    } => type_arguments
+                                        .map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>()),
                                     _ => None,
-
                                 }
-                            }
+                            },
                         })
                         .collect(),
                 )
@@ -139,7 +133,7 @@ impl TypeId {
                 let element_type = TypeDeclaration {
                     type_id: *type_id,
                     type_field: type_id.json_abi_str(),
-                    components: type_id.generate_json_abi_flat(types, type_id),
+                    components: type_id.json_type_components(types, type_id),
                     type_parameters: None, /*type_id.get_type_parameters().map(|v| {
                                                v.iter()
                                                    .map(|v| v.generate_json_abi_flat(types))
@@ -156,46 +150,54 @@ impl TypeId {
             TypeInfo::Custom {
                 name,
                 type_arguments,
-            } => {
-                match look_up_type_id(resolved_custom) {
-                    TypeInfo::Struct { fields, .. } => {
-                        let new_types = fields
-                            .iter()
-                            .map(|x| TypeDeclaration {
-                                type_id: *x.generic_type_id,
-                                type_field: x.generic_type_id.json_abi_str(),
-                                components: x
-                                    .generic_type_id
-                                    .generate_json_abi_flat(types, x.type_id),
+            } => match look_up_type_id(resolved_custom) {
+                TypeInfo::Struct { fields, .. } => {
+                    let new_types = fields
+                        .iter()
+                        .map(|x| TypeDeclaration {
+                            type_id: *x.initial_type_id,
+                            type_field: x.initial_type_id.json_abi_str(),
+                            components: x.initial_type_id.json_type_components(types, x.type_id),
+                            type_parameters: 
+                                x.type_id.get_type_parameters().map(|v| {
+                                    v.iter()
+                                        .map(|v| v.get_type_parameters_json(types))
+                                        .collect::<Vec<_>>()
+                                }),
+                        })
+                        .collect::<Vec<_>>();
+                    let new_type_arguments = type_arguments.clone().map(|v| {
+                        v.iter()
+                            .map(|v| TypeDeclaration {
+                                type_id: *v.type_id,
+                                type_field: v.type_id.json_abi_str(),
+                                components: v.type_id.json_type_components(types, v.type_id),
                                 type_parameters: None,
                             })
-                            .collect::<Vec<_>>();
-                        let new_type_arguments = type_arguments.clone().map(|v| {
-                            v.iter()
-                                .map(|v| TypeDeclaration {
-                                    type_id: *v.type_id,
-                                    type_field: v.type_id.json_abi_str(),
-                                    components: v.type_id.generate_json_abi_flat(types, v.type_id),
-                                    type_parameters: None,
-                                })
-                                .collect::<Vec<_>>()
-                        });
-                        types.extend(new_types);
-                        types.extend(new_type_arguments.unwrap());
-                        Some(
-                            fields
-                                .iter()
-                                .map(|x| TypeApplication {
-                                    name: x.name.to_string(),
-                                    type_field: *x.generic_type_id,
-                                    type_arguments: None,
-                                })
-                                .collect(),
-                        )
-                    }
-                    _ => None,
+                            .collect::<Vec<_>>()
+                    });
+                    types.extend(new_types);
+                    types.extend(new_type_arguments.unwrap());
+                    Some(
+                        fields
+                            .iter()
+                            .map(|x| TypeApplication {
+                                name: x.name.to_string(),
+                                type_field: *x.initial_type_id,
+                                type_arguments: match look_up_type_id(x.initial_type_id) {
+                                    TypeInfo::Custom {
+                                        name,
+                                        type_arguments,
+                                    } => type_arguments
+                                        .map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>()),
+                                    _ => None,
+                                },
+                            })
+                            .collect(),
+                    )
                 }
-            }
+                _ => None,
+            },
             _ => None,
         }
     }

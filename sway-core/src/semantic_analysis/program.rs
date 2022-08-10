@@ -13,7 +13,7 @@ use crate::{
     types::{ToJsonAbi, ToJsonAbiFlat},
 };
 use fuel_tx::StorageSlot;
-use sway_types::{span::Span, Ident, JsonABI, ProgramABI, Spanned, TypeDeclaration};
+use sway_types::{span::Span, ABIProgram, Ident, JsonABI, Spanned, TypeDeclaration};
 
 #[derive(Clone, Debug)]
 pub struct TypedProgram {
@@ -328,7 +328,7 @@ impl ToJsonAbi for TypedProgramKind {
 }
 
 impl ToJsonAbiFlat for TypedProgramKind {
-    type FlatOutput = ProgramABI;
+    type FlatOutput = ABIProgram;
 
     fn generate_json_abi_flat(&self, types: &mut Vec<TypeDeclaration>) -> Self::FlatOutput {
         match self {
@@ -337,12 +337,12 @@ impl ToJsonAbiFlat for TypedProgramKind {
                     .iter()
                     .map(|x| x.generate_json_abi_flat(types))
                     .collect();
-                ProgramABI {
+                ABIProgram {
                     types: types.to_vec(),
                     functions: result,
                 }
             }
-            _ => ProgramABI {
+            _ => ABIProgram {
                 types: vec![],
                 functions: vec![],
             },

@@ -145,7 +145,7 @@ impl TypedStructDeclaration {
 pub struct TypedStructField {
     pub name: Ident,
     pub type_id: TypeId,
-    pub generic_type_id: TypeId,
+    pub initial_type_id: TypeId,
     pub(crate) span: Span,
 }
 
@@ -214,7 +214,7 @@ impl TypedStructField {
         let field = TypedStructField {
             name: field.name,
             type_id: r#type,
-            generic_type_id: insert_type(field.type_info),
+            initial_type_id: insert_type(field.type_info),
             span: field.span,
         };
         ok(field, warnings, errors)

@@ -27,7 +27,7 @@ use sway_core::{
     semantic_analysis::namespace, source_map::SourceMap, types::*, BytecodeCompilationResult,
     CompileAstResult, CompileError, CompileResult, ParseProgram, TreeType,
 };
-use sway_types::{JsonABI, ProgramABI};
+use sway_types::{ABIProgram, JsonABI};
 use sway_utils::constants;
 use tracing::{info, warn};
 use url::Url;
@@ -49,7 +49,7 @@ pub struct PinnedId(u64);
 /// The result of successfully compiling a package.
 pub struct Compiled {
     pub json_abi: JsonABI,
-    pub json_abi_flat: ProgramABI,
+    pub json_abi_flat: ABIProgram,
     pub storage_slots: Vec<StorageSlot>,
     pub bytecode: Vec<u8>,
     pub tree_type: TreeType,
@@ -1881,7 +1881,7 @@ pub fn build(plan: &BuildPlan, profile: &BuildProfile) -> anyhow::Result<(Compil
     let mut namespace_map = Default::default();
     let mut source_map = SourceMap::new();
     let mut json_abi = vec![];
-    let mut json_abi_flat = ProgramABI {
+    let mut json_abi_flat = ABIProgram {
         types: vec![],
         functions: vec![],
     };

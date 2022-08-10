@@ -856,7 +856,7 @@ fn generic_params_opt_to_type_parameters(
                 });
                 TypeParameter {
                     type_id: custom_type,
-                    generic_type_id: custom_type,
+                    initial_type_id: custom_type,
                     name_ident: ident,
                     trait_constraints: Vec::new(),
                 }
@@ -2960,7 +2960,7 @@ fn ty_to_type_parameter(ec: &mut ErrorContext, ty: Ty) -> Result<TypeParameter, 
             let unknown_type = insert_type(TypeInfo::Unknown);
             return Ok(TypeParameter {
                 type_id: unknown_type,
-                generic_type_id: unknown_type,
+                initial_type_id: unknown_type,
                 name_ident: underscore_token.into(),
                 trait_constraints: Default::default(),
             });
@@ -2975,7 +2975,7 @@ fn ty_to_type_parameter(ec: &mut ErrorContext, ty: Ty) -> Result<TypeParameter, 
     });
     Ok(TypeParameter {
         type_id: custom_type,
-        generic_type_id: custom_type,
+        initial_type_id: custom_type,
         name_ident,
         trait_constraints: Vec::new(),
     })
