@@ -124,7 +124,7 @@ impl TypeParameter {
     pub(crate) fn get_json_type_parameter(&self, types: &mut Vec<JsonTypeDeclaration>) -> usize {
         let type_parameter = JsonTypeDeclaration {
             type_id: *self.initial_type_id,
-            type_field: self.initial_type_id.json_abi_str(),
+            type_field: self.initial_type_id.get_json_type_str(self.type_id),
             components: self
                 .initial_type_id
                 .get_json_type_components(types, self.type_id),

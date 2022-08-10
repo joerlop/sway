@@ -310,12 +310,13 @@ impl TypedFunctionDeclaration {
         &self,
         types: &mut Vec<JsonTypeDeclaration>,
     ) -> JsonABIFunction {
+        // A list of all `JsonTypeDeclaration`s needed for inputs
         let input_types = self
             .parameters
             .iter()
             .map(|x| JsonTypeDeclaration {
-                type_id: *x.type_id,
-                type_field: x.initial_type_id.json_abi_str(),
+                type_id: *x.initial_type_id,
+                type_field: x.initial_type_id.get_json_type_str(x.type_id),
                 components: x.initial_type_id.get_json_type_components(types, x.type_id),
                 type_parameters: x.type_id.get_type_parameters().map(|v| {
                     v.iter()
@@ -324,42 +325,41 @@ impl TypedFunctionDeclaration {
                 }),
             })
             .collect::<Vec<_>>();
+
+        // The single `JsonTypeDeclaration` needed for the output
         let output_type = JsonTypeDeclaration {
             type_id: *self.initial_return_type,
-            type_field: self.initial_return_type.json_abi_str(),
+            type_field: self.initial_return_type.get_json_type_str(self.return_type),
             components: self
                 .return_type
                 .get_json_type_components(types, self.return_type),
-            type_parameters: None,
+            type_parameters: self.return_type.get_type_parameters().map(|v| {
+                v.iter()
+                    .map(|v| v.get_json_type_parameter(types))
+                    .collect::<Vec<_>>()
+            }),
         };
+
+        // Add the new types to `types`
         types.extend(input_types);
         types.push(output_type);
+
+        // Generate the JSON data for the function
         JsonABIFunction {
             name: self.name.as_str().to_string(),
-            type_field: "function".to_string(),
             inputs: self
                 .parameters
                 .iter()
                 .map(|x| JsonTypeApplication {
-                    name: x.name.as_str().to_string(),
-                    type_field: *x.initial_type_id,
-                    type_arguments: match look_up_type_id(x.initial_type_id) {
-                        TypeInfo::Custom { type_arguments, .. } => {
-                            type_arguments.map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>())
-                        }
-                        _ => None,
-                    },
+                    name: x.name.to_string(),
+                    type_id: *x.initial_type_id,
+                    type_arguments: x.initial_type_id.get_json_type_arguments(types),
                 })
                 .collect(),
             output: JsonTypeApplication {
                 name: "".to_string(),
-                type_field: *self.initial_return_type,
-                type_arguments: match look_up_type_id(self.initial_return_type) {
-                    TypeInfo::Custom { type_arguments, .. } => {
-                        type_arguments.map(|v| v.iter().map(|v| *v.type_id).collect::<Vec<_>>())
-                    }
-                    _ => None,
-                },
+                type_id: *self.initial_return_type,
+                type_arguments: dbg!(self.initial_return_type.get_json_type_arguments(types)),
             },
         }
     }

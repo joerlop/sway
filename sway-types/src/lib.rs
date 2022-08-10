@@ -387,7 +387,6 @@ pub struct JsonABIProgram {
 #[serde(rename_all = "camelCase")]
 pub struct JsonABIFunction {
     #[serde(rename = "type")]
-    pub type_field: String,
     pub inputs: Vec<JsonTypeApplication>,
     pub name: String,
     pub output: JsonTypeApplication,
@@ -408,6 +407,6 @@ pub struct JsonTypeDeclaration {
 pub struct JsonTypeApplication {
     pub name: String,
     #[serde(rename = "type")]
-    pub type_field: usize,
+    pub type_id: usize,
     pub type_arguments: Option<Vec<usize>>,
 }
